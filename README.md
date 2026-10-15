@@ -1,68 +1,72 @@
 # BYTE Cybersecurity — Cryptography and Steganography
 
-This repository documents **the two challenges attempted for the submission**: Task 01 (Cryptography) and Task 02 (Steganography). No Binary Exploitation solution is included or claimed here.
+This repository covers the two BYTE cybersecurity challenges I attempted: cryptography and steganography. I've included the Python scripts, the challenge images, and a short explanation of how the results were obtained.
 
 ## Results
 
-| Challenge | Finding | Verification |
+| Challenge | Result | Status |
 | --- | --- | --- |
-| 01 — Cryptography | `BYTE{bY73_L8A_ChuKA_B4dLaV}` | **Candidate only:** reproducible two-stage decoding; organizer/checker has not independently confirmed the full flag |
-| 02 — Steganography | `flag{g0t_1t_in_pLAin_sight}` | **Verified:** recovered text visible in the repaired PNG; image structure and CRC verified |
+| Cryptography | `BYTE{bY73_L8A_ChuKA_B4dLaV}` | Possible answer |
+| Steganography | `flag{g0t_1t_in_pLAin_sight}` | Recovered from the repaired image |
 
-## Task 01: Base64 and Beaufort cipher
+## Task 01 — Cryptography
 
-Given ciphertext:
+The challenge started with this string:
 
-```text
+```
 QkFJTntiQTczX1E4Ul9BcmhIQ19YNHlHY0R9
 ```
 
-Base64 decoding gives:
+I started with Base64 decoding, which gave:
 
-```text
+```
 BAIN{bA73_Q8R_ArhHC_X4yGcD}
 ```
 
-The required format is `BYTE{...}`, which is not met by Base64 alone. A second candidate layer is the *classic Beaufort cipher*. Assuming the four-character known plaintext `BYTE`, the corresponding four-character key is inferred from `BAIN` using `K = (P + C) mod 26`, yielding `CYBR`.
+That wasn't the required `BYTE{...}` format, so Base64 alone wasn't enough. I investigated a second layer using the **Beaufort cipher**. With the expected prefix `BYTE` and the decoded prefix `BAIN`, the corresponding four-letter key would be `CYBR` (using `K = (P + C) mod 26`, where A = 0).
 
-The Beaufort transform `P = (K - C) mod 26`, applied to letters only (preserving case and leaving digits/underscores/braces unchanged), gives:
+Applying Beaufort with that repeating key to letters only gives:
 
-```text
+```
 BYTE{bY73_L8A_ChuKA_B4dLaV}
 ```
 
-The script reproduces that candidate and checks the reverse transformation:
+The script reproduces that output and reverses it back to the Base64 result. **This remains a candidate:** the key was derived from the expected prefix, so matching that prefix is not independent proof that it is the intended answer.
+
+To run the decoder:
 
 ```bash
-python Task01_Cryptography/decode_and_audit.py
+python decode_and_audit.py
 ```
 
-**Evidence limitation:** The key was inferred by fitting the known format, so both the prefix match and round trip are implementation checks, *not* independent evidence that this is BYTE's intended key. This result has not been confirmed by a challenge checker. See `Task01_Cryptography/analysis.md`.
+The key calculation is in [analysis.md](analysis.md).
 
-## Task 02: Repairing a corrupted PNG
+## Task 02 — Steganography
 
-The supplied `challenge_corrupted.png` begins with the expected PNG signature, but its structure has two modifications:
+The provided PNG displayed only part of the picture. Checking its structure showed two issues:
 
-1. The IHDR height claims **800 pixels**, while the header's stored CRC supports **850 pixels** for a width of 724.
-2. A premature 12-byte IEND end marker occurs at offset **138377**, interrupting the image before the actual final marker.
+- The header reported **800 pixels** in height, but its saved CRC was consistent with **850 pixels**.
+- There was an extra `IEND` marker before the actual end of the file.
 
-After removing the premature marker and restoring the CRC-supported height, Pillow successfully loads the **724 × 850** image. The recovered lower strip displays the flag:
+The repair script removes the extra marker and fixes the height. The restored image is **724 × 850 pixels**, and the previously hidden bottom section contains:
 
-```text
+```
 flag{g0t_1t_in_pLAin_sight}
 ```
 
-Reproduce from the included original image:
+To reproduce the repair:
 
 ```bash
 python -m pip install -r requirements.txt
-python Task02_Steganography/repair_png.py
+python repair_png.py
 ```
 
-The output `challenge_repaired.png` can be checked against the included repaired reference or inspected visually. The crop `recovered_flag_crop.png` highlights the visible text.
+You can compare the [original image](challenge_corrupted.png), the [repaired image](challenge_repaired.png), and the [flag close-up](recovered_flag_crop.png).
 
-## Tools and attribution
+![Recovered flag](recovered_flag_crop.png)
 
-Python, its `base64`/`zlib`/`struct` libraries and Pillow were used for decoding and PNG repair. ChatGPT assisted with investigative approaches, implementation, debugging, and drafting documentation. This repository presents reproducible methods and distinguishes the unconfirmed Task 01 candidate from the verified Task 02 recovery.
+## Tools
 
-Challenge details: https://bytesoc.dev/tasks/cybersecurity/
+Python (`base64`, `struct`, `zlib`) and Pillow were used to decode the text and repair the PNG. I also used ChatGPT for investigating approaches, debugging scripts, and polishing the explanation.
+
+[Original BYTE challenge](https://bytesoc.dev/tasks/cybersecurity/)
