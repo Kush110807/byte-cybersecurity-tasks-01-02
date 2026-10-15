@@ -1,72 +1,66 @@
-# BYTE Cybersecurity — Cryptography and Steganography
+# BYTE Cybersecurity — Cryptography & Steganography
 
-This repository covers the two BYTE cybersecurity challenges I attempted: cryptography and steganography. I've included the Python scripts, the challenge images, and a short explanation of how the results were obtained.
-
-## Results
+I attempted the first two BYTE cybersecurity challenges. This repo contains the Python scripts, the original image, the repaired image and notes on how I approached each problem.
 
 | Challenge | Result | Status |
 | --- | --- | --- |
-| Cryptography | `BYTE{bY73_L8A_ChuKA_B4dLaV}` | Possible answer |
-| Steganography | `flag{g0t_1t_in_pLAin_sight}` | Recovered from the repaired image |
+| Task 01 — Cryptography | `BYTE{bY73_L8A_ChuKA_B4dLaV}` | Possible flag |
+| Task 02 — Steganography | `flag{g0t_1t_in_pLAin_sight}` | Recovered from the PNG |
 
-## Task 01 — Cryptography
+## Task 01: Cryptography
 
-The challenge started with this string:
+The challenge text was:
 
-```
+```text
 QkFJTntiQTczX1E4Ul9BcmhIQ19YNHlHY0R9
 ```
 
-I started with Base64 decoding, which gave:
+I tried Base64 first and got:
 
-```
+```text
 BAIN{bA73_Q8R_ArhHC_X4yGcD}
 ```
 
-That wasn't the required `BYTE{...}` format, so Base64 alone wasn't enough. I investigated a second layer using the **Beaufort cipher**. With the expected prefix `BYTE` and the decoded prefix `BAIN`, the corresponding four-letter key would be `CYBR` (using `K = (P + C) mod 26`, where A = 0).
+It looked like a flag, but the prefix was wrong: the required format is `BYTE{...}`.
 
-Applying Beaufort with that repeating key to letters only gives:
+I then looked at a possible second layer using the **Beaufort cipher**. If `BAIN` is the encrypted prefix and `BYTE` is the expected plaintext, the Beaufort formula `K = (P + C) mod 26` gives the key `CYBR` (using A = 0). Repeating that key over letters, while leaving numbers and punctuation unchanged, produces:
 
-```
+```text
 BYTE{bY73_L8A_ChuKA_B4dLaV}
 ```
 
-The script reproduces that output and reverses it back to the Base64 result. **This remains a candidate:** the key was derived from the expected prefix, so matching that prefix is not independent proof that it is the intended answer.
-
-To run the decoder:
+This result can be recreated and reversed with the script. **I haven't had the full flag confirmed by BYTE.** The key was worked out using the known prefix, so the match alone isn't enough to prove it is the intended solution.
 
 ```bash
 python decode_and_audit.py
 ```
 
-The key calculation is in [analysis.md](analysis.md).
+More on the key calculation: [analysis.md](analysis.md).
 
-## Task 02 — Steganography
+## Task 02: Steganography
 
-The provided PNG displayed only part of the picture. Checking its structure showed two issues:
+The supplied PNG only showed part of the picture. The issue turned out to be in the file structure, rather than the visible pixels:
 
-- The header reported **800 pixels** in height, but its saved CRC was consistent with **850 pixels**.
-- There was an extra `IEND` marker before the actual end of the file.
+- The image header said the height was **800 px**, but its saved CRC checksum matched **850 px**.
+- An extra `IEND` (end-of-image) marker appeared in the file before the real ending.
 
-The repair script removes the extra marker and fixes the height. The restored image is **724 × 850 pixels**, and the previously hidden bottom section contains:
+The Python script removes that extra marker and fixes the height. The recovered **724 × 850** image shows the flag near the bottom:
 
-```
+```text
 flag{g0t_1t_in_pLAin_sight}
 ```
-
-To reproduce the repair:
 
 ```bash
 python -m pip install -r requirements.txt
 python repair_png.py
 ```
 
-You can compare the [original image](challenge_corrupted.png), the [repaired image](challenge_repaired.png), and the [flag close-up](recovered_flag_crop.png).
+Files: [corrupted PNG](challenge_corrupted.png) · [repaired PNG](challenge_repaired.png) · [flag close-up](recovered_flag_crop.png)
 
-![Recovered flag](recovered_flag_crop.png)
+![Flag visible after PNG repair](recovered_flag_crop.png)
 
 ## Tools
 
-Python (`base64`, `struct`, `zlib`) and Pillow were used to decode the text and repair the PNG. I also used ChatGPT for investigating approaches, debugging scripts, and polishing the explanation.
+Python (`base64`, `struct`, `zlib`) and Pillow. ChatGPT helped me explore approaches, work through the scripts, debug issues and refine these notes.
 
 [Original BYTE challenge](https://bytesoc.dev/tasks/cybersecurity/)
